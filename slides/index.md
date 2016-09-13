@@ -191,15 +191,19 @@ Source code
 
 ---
 
-
 ![PRs](images/ErrorReporting.png)
 
-
 ---
+
+### Pull Request #1102
+
 
 ![Record labels](images/recordlabel.png)
 
 ---
+
+### Pull Request #1102
+
 
 ![Record labels](images/recordlabel2.png)
 
@@ -261,3 +265,63 @@ Source code
         |> List.distinct
         |> List.sortBy (fun s -> EditDistance.CalcEditDistance(unknownIdent,s))
         |> take 5
+
+***
+
+### Type checking
+#### Hindley-Milner Type Inference Algorithm
+
+---
+
+    type TcEnv =
+      { eNameResEnv : NameResolutionEnv 
+        eUngeneralizableItems: UngeneralizableItem list
+        eCompPath: CompilationPath 
+        eAccessPath: CompilationPath         
+        eContextInfo : ContextInfo 
+        eCallerMemberName : string option
+        // ...
+        }
+
+    type cenv = 
+      { g: TcGlobals
+        tcSink: TcResultsSink 
+        topCcu: CcuThunk  
+        css: ConstraintSolverState
+        // ...        
+        } 
+
+---
+
+    let UnifyTypes cenv (env: TcEnv) m expectedTy actualTy = 
+        ConstraintSolver.AddCxTypeEqualsType env.eContextInfo env.DisplayEnv cenv.css m 
+           (tryNormalizeMeasureInType cenv.g expectedTy) 
+           (tryNormalizeMeasureInType cenv.g actualTy)
+
+---
+
+    let rec fib n = 
+        if n <= 2 then 
+            1
+        else 
+            fib (n - 1) + fib (n - 2)
+
+---
+
+### Pull Request #1149
+
+
+![type test](images/downcast.png)
+
+---
+
+    let SolveTypSubsumesTypWithReport (csenv:ConstraintSolverEnv) ndeep m trace ty1 ty2 =
+        TryD (fun () -> SolveTypSubsumesTypKeepAbbrevs csenv ndeep m trace ty1 ty2)
+            (fun res ->
+                match csenv.eContextInfo with
+                | ContextInfo.RuntimeTypeTest ->
+                    // test if we can cast other way around
+                    match CollectThenUndo (fun _ -> SolveTypSubsumesTypKeepAbbrevs ...) with 
+                    | OkResult _ -> ErrorD(...,ContextInfo.DowncastUsedInsteadOfUpcast)
+                    | _ -> ErrorD(...,ContextInfo.NoContext)
+                | _ -> ErrorD (...,csenv.eContextInfo)
