@@ -162,6 +162,8 @@ Source code -> Lexer -> Parser -> Name resolution ==> AST
 
     let f list = list.Length
 
+    printfn "%A" list.Items
+
 ---
 
 ### Immutable maps FTW
@@ -291,6 +293,15 @@ Source code -> Lexer -> Parser -> Name resolution <br />
         css: ConstraintSolverState
         // ...        
         } 
+---
+
+    let rec fib n = 
+        if n <= 2 then 
+            1
+        else 
+            fib (n - 1) + fib (n - 2)
+
+
 
 ---
 
@@ -299,13 +310,6 @@ Source code -> Lexer -> Parser -> Name resolution <br />
            (tryNormalizeMeasureInType cenv.g expectedTy) 
            (tryNormalizeMeasureInType cenv.g actualTy)
 
----
-
-    let rec fib n = 
-        if n <= 2 then 
-            1
-        else 
-            fib (n - 1) + fib (n - 2)
 
 ---
 
@@ -453,3 +457,7 @@ Source code -> Lexer -> Parser -> Name resolution <br />
 
 
 <img src="images/FCS.png" alt="FSharp.Compiler.Service" >
+
+***
+
+Thank you
