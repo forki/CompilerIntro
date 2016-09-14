@@ -31,27 +31,20 @@ Source code
    
 -> Program / Error message
 
----
-
-Source code 
- 
-   -> Lexer -> Parser -> Type checker => TAST
-   
-   -> Optimizer -> Code Generator
-   
--> Program / Error message
-
 ***
 
 ### Lexer
 
-* Reads source character by character and returns stream of tokens
+<br /><br />
+Source code -> Lexer  ==> Stream of Tokens
 
 ---
 
 ![Lexer pattern match](images/Lexer.png)
 
 ---
+
+### Tabs vs. Spaces
 
 <img src="images/tabs.png" alt="Tabs vs. Spaces" >
 
@@ -105,7 +98,9 @@ Source code
 
 ### Parser
 
-* Creates syntactic structure (parse tree) from a stream of tokens
+<br /><br />
+Source code -> Lexer -> Parser ==> Parse tree
+
 
 ---
 
@@ -144,14 +139,16 @@ Source code
                         CultureInfo.InvariantCulture)
         | 'b' -> sign *. (int64OfUInt64 (parseBinaryUInt64 s p l))
         | 'o' -> sign *. (int64OfUInt64 (parseOctalUInt64 s p l))
-        | _ -> Int64.Parse(s, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture)        
+        | _ -> Int64.Parse(s, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture)
 
 ***
 
 ### Name resolution
 
 
-<img src="images/AST.svg.png" alt="AST from wikipedia" width=300 >
+<br /><br />
+Source code -> Lexer -> Parser -> Name resolution ==> AST
+
 
 ---
 
@@ -271,6 +268,10 @@ Source code
 ### Type checking
 #### Hindley-Milner Type Inference Algorithm
 
+<br /><br />
+Source code -> Lexer -> Parser -> Name resolution <br />
+-> Type checker ==> TAST
+
 ---
 
     type TcEnv =
@@ -325,3 +326,130 @@ Source code
                     | OkResult _ -> ErrorD(...,ContextInfo.DowncastUsedInsteadOfUpcast)
                     | _ -> ErrorD(...,ContextInfo.NoContext)
                 | _ -> ErrorD (...,csenv.eContextInfo)
+
+***
+
+### Optimizer
+
+<br /><br />
+Source code -> Lexer -> Parser -> Name resolution <br />
+-> Type checker -> Optimizer ==> TAST
+
+---
+
+    let rec OptimizeExpr cenv (env:IncrementalOptimizationEnv) expr =
+        match expr with
+        | Expr.Sequential _ | Expr.Let _ -> OptimizeLinearExpr cenv env expr id
+        | Expr.Const (c,m,ty) -> OptimizeConst cenv env expr (c,m,ty)
+        | Expr.Val (v,_vFlags,m) -> OptimizeVal cenv env expr (v,m)
+        | Expr.Quote(ast,splices,isFromQueryExpression,m,ty) -> ...
+        | Expr.App(f,fty,tyargs,argsl,m) -> 
+            // eliminate uses of query
+            match TryDetectQueryQuoteAndRun cenv expr with 
+            | Some newExpr -> OptimizeExpr cenv env newExpr
+            | None -> OptimizeApplication cenv env (f,fty,tyargs,argsl,m)
+        ...
+
+--- 
+
+### Optimizer
+
+* Inlining
+* Inner lambda to top level funcs
+* Removing tuples
+* Optimize seq { } workflows
+* Numeric calculations
+* Beta reduction
+* ...
+
+---
+
+### Optimizer
+
+    let y = (fun x -> 2 + x * x) 3
+
+    // beta reduction
+    let y = 2 + 3 * 3
+
+    // numeric calculations
+    // (special form form of beta reduction)
+    let y = 11
+
+---
+
+### Optimizer outlook: Fusion
+
+    ["hello"; "world"; "!"]
+    |> Seq.map (fun (y:string) -> y.Length) 
+    |> Seq.map (fun x -> x * 3)
+
+    // after PR 1525 reduction
+    ["hello"; "world"; "!"]
+    |> Seq.map (fun x -> x.Length * 3)
+
+---
+
+    match expr' with
+    // Rewrite Seq.map f (Seq.map g) xs into Seq.map (fun x -> f(g x)) xs
+    | Expr.App(Expr.Val(outerValRef,_,_) as outerSeqMap,ttype1,[_;fOutType],
+                [(Expr.Lambda(_,None,None,_,_,m1,fRetType) as f)
+                    Expr.App(Expr.Val(innerValRef,_,_),_,[gInType;_],
+                            [Expr.Lambda(_,None,None,gVals,g,_,gRetType)
+                                rest],_)],m2) when
+        valRefEq cenv.g innerValRef cenv.g.seq_map_vref &&
+        valRefEq cenv.g outerValRef cenv.g.seq_map_vref 
+            -> 
+        let newApp = Expr.App(f,TType_fun(gRetType, fRetType),[],[g],m2)
+        
+        let reduced =
+            Expr.App(outerSeqMap,ttype1,[gInType;fOutType],
+                    [Expr.Lambda(newUnique(),None,None,gVals,newApp,m1,gRetType) 
+                        rest],
+                    m2)
+
+        OptimizeExpr cenv env reduced
+    | _ ->
+
+***
+
+### Code gen: IL Emitter
+
+<br /><br />
+Source code -> Lexer -> Parser -> Name resolution <br />
+-> Type checker -> Optimizer -> IL Emitter ==> Program / PDBs
+
+---
+
+    let rec GenExpr (cenv:cenv) (cgbuf:CodeGenBuffer) eenv sp expr sequel =
+        match expr with 
+        | Expr.Const(c,m,ty) -> 
+            GenConstant cenv cgbuf eenv (c,m,ty) sequel
+        | Expr.Match (spBind,exprm,tree,targets,m,ty) -> 
+            GenMatch cenv cgbuf eenv (spBind,exprm,tree,targets,m,ty) sequel
+        | Expr.Sequential(e1,e2,dir,spSeq,m) ->  
+            GenSequential cenv cgbuf eenv sp (e1,e2,dir,spSeq,m) sequel
+        | Expr.LetRec (binds,body,m,_)  -> 
+            GenLetRec cenv cgbuf eenv (binds,body,m) sequel
+        | Expr.Let (bind,body,_,_)  -> 
+            // This case implemented here to get a guaranteed tailcall 
+            // Make sure we generate the sequence point outside the scope of the variable
+            let startScope,endScope as scopeMarks = StartDelayedLocalScope "let" cgbuf
+            let eenv = AllocStorageForBind cenv cgbuf scopeMarks eenv bind
+            let spBind = GenSequencePointForBind cenv cgbuf bind
+            CG.SetMarkToHere cgbuf startScope 
+            GenBindAfterSequencePoint cenv cgbuf eenv spBind bind
+        | ...
+
+---
+
+### Code gen: Fable
+
+
+<img src="images/fable.png" alt="Fable" >
+
+---
+
+### Code gen: FSharp.Compiler.Service
+
+
+<img src="images/FCS.png" alt="FSharp.Compiler.Service" >
