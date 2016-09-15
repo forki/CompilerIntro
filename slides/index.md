@@ -4,6 +4,81 @@
 - theme : night
 - transition : default
 
+
+***
+
+### Willkommen zur
+### F# und RemmiDemmi 2016
+<br /><br />
+
+http://remmidemmi.org/
+
+---
+
+### Wir danken unseren Sponsoren
+<br /><br />
+<img src="images/cit-horizontal.png" alt="CIT" >
+
+---
+
+### Wir danken unseren Sponsoren
+<br /><br />
+<img src="images/grossweber.png" alt="Großweber" >
+<br /><br />
+
+* https://devopenspace.de/ (14.-16.10.2016)
+
+---
+
+### Wir danken unseren Sponsoren
+<br /><br />
+<img src="images/dreamlines-logo.png" alt="Dreamlines" >
+<br /><br />
+
+* Arjan van der Meer (CTO)
+
+---
+
+### Agenda
+
+* 08:30 - 09:00 - Frühstück
+* 09:00 - 09:15 - Intro
+* 09:15 - 10:15 - Ralf Westphal - Keynote
+* 10:15 - 10:30 - Kaffeepause
+* 10:30 - 11:30 - Marco Heimeshoff - DDD mit F#
+* 11:30 - 12:30 - Carsten König - Eventsourcing mit F#
+* 12:30 - 13:30 - Mittagessen
+
+---
+
+### Agenda
+
+
+* 13:30 - 14:30 - Mike Bild - Microservice-Praxis mit F# und Docker
+* 14:30 - 14:45 - Kaffeepause
+* 14:45 - 15:45 - Isaac Abraham - F# in the cloud
+* 15:45 - 16:00 - Kaffeepause
+* 16:00 - 17:00 - Steffen Forkmann - Ein Ausflug in den F# Compiler
+
+---
+
+### Party (ab 18 Uhr)
+
+<img src="images/Maps1.png" alt="Brauhaus" width=500 >
+
+
+* Brauhaus Joh. Albrecht, Adolphsbrücke 7
+
+
+---
+
+### HackDay
+
+
+* 09:00 - 09:30 - Frühstück
+* 09:30 - 15:00 - HackDay / Workshops
+
+
 ***
 
 ### Excursion into the F# compiler
