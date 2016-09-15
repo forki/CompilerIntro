@@ -376,7 +376,7 @@ Source code -> Lexer -> Parser -> Name resolution <br />
     let y = 2 + 3 * 3
 
     // numeric calculations
-    // (special form form of beta reduction)
+    // (special form of beta reduction)
     let y = 11
 
 ---
