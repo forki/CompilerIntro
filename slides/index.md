@@ -7,9 +7,16 @@
 
 ***
 
-### Excursion into the F# compiler
+### A journey into the F# compiler
 
 Steffen Forkmann
+
+---
+
+### Disclaimer
+
+
+This is NOT a formal compiler design talk
 
 ---
 
@@ -61,14 +68,15 @@ Source code -> Lexer  ==> Stream of Tokens
     | offwhite+  
         { if args.lightSyntaxStatus.Status then 
               errorR(Error(FSComp.SR.lexTabsNotAllowed(),lexbuf.LexemeRange))
+          
           if not skip then 
-              (WHITESPACE (LexCont.Token !args.ifdefStack)) 
+              WHITESPACE (LexCont.Token !args.ifdefStack)
           else 
               token args skip lexbuf }
 
 ---
 
-## Pull Request #1243
+## Pull Request #1243 (@AviAvni)
 
     let creditCardNumber = 1234_5678_9012_3456L
     let socialSecurityNumber = 999_99_9999L
@@ -78,10 +86,6 @@ Source code -> Lexer  ==> Stream of Tokens
     let maxLong = 0x7fff_ffff_ffff_ffffL
     let nybbles = 0b0010_0101
     let bytes = 0b11010010_01101001_10010100_10010010
-
----
-
-<img src="images/PR1243.png" alt="Underscores in number literals" width=700 >
 
 ---
 
@@ -95,6 +99,11 @@ Source code -> Lexer  ==> Stream of Tokens
     let integer = digit ((digit | separator)* digit)?
 
 
+---
+
+<img src="images/PR1243.png" alt="Underscores in number literals" width=700 >
+
+
 ***
 
 ### Parser
@@ -105,16 +114,18 @@ Source code -> Lexer -> Parser ==> Parse tree
 
 ---
 
-### Euclidean algorithm
+### Euclidean algorithm (pseudo code)
 
-    while b != 0
+    while b <> 0
         if a > b
-            a := a − b
+            a := a - b
         else
-            b := b − a
+            b := b - a
     return a
 
-<img src="images/AST.svg.png" alt="AST from wikipedia" width=300 >
+---
+
+<img src="images/AST.svg.png" alt="AST from wikipedia" width=550 >
 
 ---
 
@@ -161,7 +172,7 @@ Source code -> Lexer -> Parser -> Name resolution ==> AST
 
     type List = { ... }
 
-    let f list = list.Length
+    let f (list:List) = list.Length
 
     printfn "%A" list.Items
 
@@ -303,6 +314,136 @@ Source code -> Lexer -> Parser -> Name resolution <br />
             fib (n - 1) + fib (n - 2)
 
 
+---
+
+    // if :: bool - 'a - 'a -> 'a
+    if n <= 2 then 
+        1
+    else 
+        fib (n - 1) + fib (n - 2)
+
+
+---
+ 
+    // if :: bool - 'a - 'a -> 'a
+    if n <= 2 then 
+        1
+    else 
+        fib (n - 1) + fib (n - 2) 
+
+    [T_COND: bool]
+    [T_IF: 'a]
+    [T_ELSE: 'a]
+    [T_IF = T_ELSE]
+
+---
+ 
+    // if :: bool - 'a - 'a -> 'a
+    if n <= 2 then 
+        1
+    else 
+        fib (n - 1) + fib (n - 2) 
+
+    [T_COND: bool]
+    [T_IF: 'a]
+
+---
+ 
+    // (<=) :: 'a -> 'a -> bool when 'a is Number
+    n <= 2
+
+    [T_n: 'a when 'a is Number]
+    [T_2: 'a when 'a is Number]
+    [T_n = T_2]
+    [T_COND: bool]
+    [T_IF: 'a]
+
+---
+ 
+    // 2 :: int
+    n <= 2
+
+    [T_n: int]
+    [T_2: int]
+    [T_COND: bool]
+    [T_IF: 'a]
+
+---
+ 
+    if n <= 2 then 
+        1 // 1 :: int
+    else 
+        fib (n - 1) + fib (n - 2) 
+
+    [T_n: int]
+    [T_2: int]
+    [T_COND: bool]
+    [T_IF: int]
+
+---
+ 
+    // (+) :: 'a -> 'a -> 'a when 'a is Number    
+    (fib (n - 1)) + (fib (n - 2))
+
+    [T_n: int]
+    [T_2: int]
+    [T_COND: bool]
+    [T_IF: int]
+    [T_Left: 'a when 'a is Number]
+    [T_Right: 'a when 'a is Number]
+    [T_Left = T_Right]
+    [T_Left = T_IF]
+
+
+---
+ 
+    // (+) :: 'a -> 'a -> 'a when 'a is Number    
+    (fib (n - 1)) + (fib (n - 2))
+
+    [T_n: int]
+    [T_2: int]
+    [T_COND: bool]
+    [T_IF: int]
+
+
+---
+ 
+    // fib :: 'a -> 'b
+    fib (n - 1)
+
+    [T_n: int]
+    [T_2: int]
+    [T_COND: bool]
+    [T_IF: int]
+    [T_Fib: 'a -> 'b]
+    [T_Arg: 'a]
+    [T_FibResult: int]
+
+---
+ 
+    // (-) :: 'a -> 'a -> 'a when 'a is number
+    (n - 1)
+
+    [T_n: int]
+    [T_2: int]
+    [T_COND: bool]
+    [T_IF: int]
+    [T_Fib: 'a -> int]
+    [T_Arg: int]
+
+---
+
+    let rec fib n = 
+        if n <= 2 then 
+            1
+        else 
+            fib (n - 1) + fib (n - 2)
+
+    [T_n: int]
+    [T_2: int]
+    [T_COND: bool]
+    [T_IF : int]
+    [T_Fib : int -> int]
 
 ---
 
@@ -382,15 +523,15 @@ Source code -> Lexer -> Parser -> Name resolution <br />
 
 ---
 
-### Optimizer outlook: Fusion
+### Optimizer experiment: Fusion
 
     ["hello"; "world"; "!"]
-    |> Seq.map (fun (y:string) -> y.Length) 
+    |> Seq.map (fun (y:string) -> y.Length * 2) 
     |> Seq.map (fun x -> x * 3)
 
     // after PR 1525 reduction
     ["hello"; "world"; "!"]
-    |> Seq.map (fun x -> x.Length * 3)
+    |> Seq.map (fun x -> x.Length * 6)
 
 ---
 
@@ -445,6 +586,14 @@ Source code -> Lexer -> Parser -> Name resolution <br />
             GenBindAfterSequencePoint cenv cgbuf eenv spBind bind
         | ...
 
+
+---
+
+### FSharp.Compiler.Service
+
+
+<img src="images/FCS.png" alt="FSharp.Compiler.Service" >
+
 ---
 
 ### Code gen: Fable
@@ -452,12 +601,7 @@ Source code -> Lexer -> Parser -> Name resolution <br />
 
 <img src="images/fable.png" alt="Fable" >
 
----
 
-### Code gen: FSharp.Compiler.Service
-
-
-<img src="images/FCS.png" alt="FSharp.Compiler.Service" >
 
 ***
 
